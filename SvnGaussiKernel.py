@@ -14,7 +14,8 @@ class SvnGaussiKernel(object) :
         self.x_data = tf.placeholder(shape=[None,MAX_SEQUENCE], dtype=tf.float32,name='x_data')
         self.y_target = tf.placeholder(shape=[None, 1], dtype=tf.float32,name='y_target')
         self.prediction_grid = tf.placeholder(shape=[None,MAX_SEQUENCE], dtype=tf.float32,name='prediction_grid')
-
+        self.all_x = tf.constant(ALL_X, dtype=tf.float32)
+        self.all_y = tf.constant(ALL_Y, dtype=tf.float32)
         # Create variables for svm
         b = tf.Variable(tf.random_normal(shape=[1, BATCH_SIZE]))
 
@@ -44,3 +45,12 @@ class SvnGaussiKernel(object) :
             # Declare optimizer
             my_opt = tf.train.GradientDescentOptimizer(0.009)
             self.train_step = my_opt.minimize(self.loss)
+
+            #for prediction
+            rA_p = tf.reshape(tf.reduce_sum(tf.square(self.all_x), 1), [-1, 1])
+            rB_p = tf.reshape(tf.reduce_sum(tf.square(self.prediction_grid), 1), [-1, 1])
+            pred_sq_dist_p = tf.add(tf.subtract(rA_p, tf.multiply(2., tf.matmul(self.all_x, tf.transpose(self.prediction_grid),name='mul_of_xdata__by__tr_predctiongrid'))), tf.transpose(rB_p))
+            pred_kernel_p = tf.exp(tf.multiply(gamma, tf.abs(pred_sq_dist_p)))
+
+            prediction_output_p = tf.matmul(tf.multiply(tf.transpose(self.all_y), b), pred_kernel_p)
+            self.prediction_p = tf.sign(prediction_output_p - tf.reduce_mean(prediction_output_p))
